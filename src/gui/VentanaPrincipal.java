@@ -10,16 +10,26 @@ import java.sql.SQLException;
 import java.util.List;
 
 public class VentanaPrincipal extends JFrame {
-    private final GestorBiblioteca gestor;
-
+    private GestorBiblioteca gestor;
+    private String rolUsuario;
     private JTextArea areaSalida;
 
-    public VentanaPrincipal() {
-        gestor = new GestorBiblioteca();
-        setTitle("Sistema Biblioteca Don Bosco");
+    public VentanaPrincipal(String rolUsuario) {
+        this.rolUsuario = rolUsuario;
+        try {
+            gestor = new GestorBiblioteca();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        setTitle("Sistema Biblioteca Don Bosco - [" + rolUsuario.toUpperCase() + "]");
         setSize(600, 400);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
         construirUI();
+    }
+
+    public VentanaPrincipal() {
+
     }
 
     private void construirUI() {
@@ -32,17 +42,34 @@ public class VentanaPrincipal extends JFrame {
         JButton btnUsuarios = new JButton("Mostrar Usuarios");
         JButton btnDocumentos = new JButton("Mostrar Documentos");
         JButton btnPrestamos = new JButton("Prestamos Activos");
+        JButton btnCerrarSesion = new JButton("Cerrar Sesión");
+
+        // Configurar visibilidad según el rol
+        if (!"administrador".equalsIgnoreCase(rolUsuario)) {
+            btnUsuarios.setEnabled(false);
+        }
 
         btnUsuarios.addActionListener(e -> mostrarUsuarios());
         btnDocumentos.addActionListener(e -> mostrarDocumentos());
         btnPrestamos.addActionListener(e -> mostrarPrestamos());
+        btnCerrarSesion.addActionListener(e -> {
+            try {
+                cerrarSesion();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+        });
 
-        JPanel botones = new JPanel();
+        JPanel botones = new JPanel(new FlowLayout());
         botones.add(btnUsuarios);
         botones.add(btnDocumentos);
         botones.add(btnPrestamos);
 
-        panel.add(botones, BorderLayout.NORTH);
+        JPanel panelInferior = new JPanel(new BorderLayout());
+        panelInferior.add(botones, BorderLayout.CENTER);
+        panelInferior.add(btnCerrarSesion, BorderLayout.EAST);
+
+        panel.add(panelInferior, BorderLayout.NORTH);
         panel.add(scroll, BorderLayout.CENTER);
 
         add(panel);
@@ -81,6 +108,15 @@ public class VentanaPrincipal extends JFrame {
             }
         } catch (SQLException ex) {
             mostrarError(ex);
+        }
+    }
+
+    private void cerrarSesion() throws SQLException {
+        dispose(); // Cierra esta ventana
+        try {
+            new LoginWindow().setVisible(true); // Muestra la ventana de login
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 
