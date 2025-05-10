@@ -19,7 +19,8 @@ public class VentanaPrincipal extends JFrame {
         try {
             gestor = new GestorBiblioteca();
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            mostrarError("Error al conectar con la base de datos: " + e.getMessage());
+            return;
         }
         setTitle("Sistema Biblioteca Don Bosco - [" + rolUsuario.toUpperCase() + "]");
         setSize(600, 400);
@@ -28,100 +29,147 @@ public class VentanaPrincipal extends JFrame {
         construirUI();
     }
 
-    public VentanaPrincipal() {
-
-    }
-
     private void construirUI() {
         JPanel panel = new JPanel(new BorderLayout());
+        JPanel botones = new JPanel(new GridLayout(0, 1));
+
+        JButton btnUsuarios = new JButton("Mostrar Usuarios");
+        JButton btnDocumentos = new JButton("Mostrar Documentos");
+        JButton btnPrestamos = new JButton("Prestamos Activos");
+
+        JButton btnAgregarUsuario = new JButton("Agregar Usuario");
+        if (!rolUsuario.equalsIgnoreCase("administrador") && !rolUsuario.equalsIgnoreCase("maestro")) {
+            btnAgregarUsuario.setEnabled(false);
+        }
+
+        JButton btnAgregarDocumento = new JButton("Agregar Documento");
+        if (!rolUsuario.equalsIgnoreCase("administrador") && !rolUsuario.equalsIgnoreCase("maestro")) {
+            btnAgregarDocumento.setEnabled(false);
+        }
+
+        JButton btnPrestarDocumento = new JButton("Prestar Documento");
+        JButton btnDevolverDocumento = new JButton("Devolver Documento");
+
+        botones.add(btnUsuarios);
+        botones.add(btnDocumentos);
+        botones.add(btnPrestamos);
+        botones.add(btnAgregarUsuario);
+        botones.add(btnAgregarDocumento);
+        botones.add(btnPrestarDocumento);
+        botones.add(btnDevolverDocumento);
 
         areaSalida = new JTextArea();
         areaSalida.setEditable(false);
         JScrollPane scroll = new JScrollPane(areaSalida);
 
-        JButton btnUsuarios = new JButton("Mostrar Usuarios");
-        JButton btnDocumentos = new JButton("Mostrar Documentos");
-        JButton btnPrestamos = new JButton("Prestamos Activos");
-        JButton btnCerrarSesion = new JButton("Cerrar Sesión");
-
-        // Configurar visibilidad según el rol
-        if (!"administrador".equalsIgnoreCase(rolUsuario)) {
-            btnUsuarios.setEnabled(false);
-        }
+        panel.add(botones, BorderLayout.WEST);
+        panel.add(scroll, BorderLayout.CENTER);
+        add(panel);
 
         btnUsuarios.addActionListener(e -> mostrarUsuarios());
         btnDocumentos.addActionListener(e -> mostrarDocumentos());
         btnPrestamos.addActionListener(e -> mostrarPrestamos());
-        btnCerrarSesion.addActionListener(e -> {
-            try {
-                cerrarSesion();
-            } catch (SQLException ex) {
-                throw new RuntimeException(ex);
-            }
-        });
+        btnAgregarUsuario.addActionListener(e -> agregarUsuario());
+        btnAgregarDocumento.addActionListener(e -> agregarDocumento());
+        btnPrestarDocumento.addActionListener(e -> prestarDocumento());
+        btnDevolverDocumento.addActionListener(e -> devolverDocumento());
+    }
 
-        JPanel botones = new JPanel(new FlowLayout());
-        botones.add(btnUsuarios);
-        botones.add(btnDocumentos);
-        botones.add(btnPrestamos);
-
-        JPanel panelInferior = new JPanel(new BorderLayout());
-        panelInferior.add(botones, BorderLayout.CENTER);
-        panelInferior.add(btnCerrarSesion, BorderLayout.EAST);
-
-        panel.add(panelInferior, BorderLayout.NORTH);
-        panel.add(scroll, BorderLayout.CENTER);
-
-        add(panel);
+    private void mostrarError(String mensaje) {
+        JOptionPane.showMessageDialog(this, mensaje, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
     private void mostrarUsuarios() {
         try {
-            List<Usuario> lista = gestor.obtenerUsuarios();
+            List<Usuario> usuarios = gestor.obtenerUsuarios();
             areaSalida.setText("Usuarios:\n");
-            for (Usuario u : lista) {
+            for (Usuario u : usuarios) {
                 areaSalida.append(u.toString() + "\n");
             }
-        } catch (SQLException ex) {
-            mostrarError(ex);
+        } catch (SQLException e) {
+            mostrarError("Error al obtener usuarios: " + e.getMessage());
         }
     }
 
     private void mostrarDocumentos() {
         try {
-            List<Documento> lista = gestor.obtenerDocumentos();
+            List<Documento> documentos = gestor.obtenerDocumentos();
             areaSalida.setText("Documentos:\n");
-            for (Documento d : lista) {
+            for (Documento d : documentos) {
                 areaSalida.append(d.toString() + "\n");
             }
-        } catch (SQLException ex) {
-            mostrarError(ex);
+        } catch (SQLException e) {
+            mostrarError("Error al obtener documentos: " + e.getMessage());
         }
     }
 
     private void mostrarPrestamos() {
         try {
-            List<Prestamo> lista = gestor.obtenerPrestamosActivos();
-            areaSalida.setText("Préstamos activos:\n");
-            for (Prestamo p : lista) {
+            List<Prestamo> prestamos = gestor.obtenerPrestamos();
+            areaSalida.setText("Préstamos:\n");
+            for (Prestamo p : prestamos) {
                 areaSalida.append(p.toString() + "\n");
             }
-        } catch (SQLException ex) {
-            mostrarError(ex);
-        }
-    }
-
-    private void cerrarSesion() throws SQLException {
-        dispose(); // Cierra esta ventana
-        try {
-            new LoginWindow().setVisible(true); // Muestra la ventana de login
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            mostrarError("Error al obtener préstamos: " + e.getMessage());
         }
     }
 
-    private void mostrarError(Exception e) {
-        areaSalida.setText("Error: " + e.getMessage());
-        e.printStackTrace();
+    private void agregarUsuario() {
+        JDialog dialogo = new JDialog(this, "Agregar Usuario", true);
+        dialogo.setSize(300, 200);
+        dialogo.setLayout(new GridLayout(4, 2));
+        dialogo.setLocationRelativeTo(this);
+
+        JLabel lblNombre = new JLabel("Nombre:");
+        JTextField txtNombre = new JTextField();
+
+        JLabel lblRol = new JLabel("Rol:");
+        String[] roles = {"administrador", "maestro", "alumno"};
+        JComboBox<String> comboRol = new JComboBox<>(roles);
+
+        JButton btnGuardar = new JButton("Guardar");
+        JButton btnCancelar = new JButton("Cancelar");
+
+        btnGuardar.addActionListener(e -> {
+            String nombre = txtNombre.getText().trim();
+            String rol = (String) comboRol.getSelectedItem();
+
+            if (nombre.isEmpty()) {
+                JOptionPane.showMessageDialog(dialogo, "El nombre no puede estar vacío.");
+                return;
+            }
+
+            try {
+                gestor.agregarUsuario(nombre, rol);
+                JOptionPane.showMessageDialog(dialogo, "Usuario agregado correctamente.");
+                dialogo.dispose();
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(dialogo, "Error al agregar usuario: " + ex.getMessage());
+            }
+        });
+
+        btnCancelar.addActionListener(e -> dialogo.dispose());
+
+        dialogo.add(lblNombre);
+        dialogo.add(txtNombre);
+        dialogo.add(lblRol);
+        dialogo.add(comboRol);
+        dialogo.add(btnGuardar);
+        dialogo.add(btnCancelar);
+
+        dialogo.setVisible(true);
+    }
+
+    private void agregarDocumento() {
+        JOptionPane.showMessageDialog(this, "Función para agregar documento aún no implementada.");
+    }
+
+    private void prestarDocumento() {
+        JOptionPane.showMessageDialog(this, "Función para prestar documento aún no implementada.");
+    }
+
+    private void devolverDocumento() {
+        JOptionPane.showMessageDialog(this, "Función para devolver documento aún no implementada.");
     }
 }
